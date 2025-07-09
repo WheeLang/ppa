@@ -1,0 +1,30 @@
+name: Register PPA Profile
+
+on:
+  workflow_dispatch:
+    inputs:
+      user:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-profile:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Create user profile from template
+      run: |
+        mkdir -p docs/${{ github.event.inputs.user }}/profile
+        cp docs/default/profile/index.html docs/${{ github.event.inputs.user }}/profile/index.html
+
+    - name: Commit & Push
+      run: |
+        git config user.name "HighBit Bot"
+        git config user.email "actions@github.com"
+        git add docs/
+        git commit -m "Create profile page for ${{ github.event.inputs.user }}"
+        git push
