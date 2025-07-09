@@ -1,0 +1,29 @@
+name: Submit PPA
+
+on:
+  repository_dispatch:
+    types: [submit-ppa]
+
+jobs:
+  submit-ppa:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add PPA YAML
+      run: |
+        mkdir -p docs/${{ github.event.client_payload.user }}
+        cat <<EOF > docs/${{ github.event.client_payload.user }}/${{ github.event.client_payload.ppa_name }}.yml
+name: ${{ github.event.client_payload.ppa_name }}
+description: ${{ github.event.client_payload.description }}
+version: ${{ github.event.client_payload.version }}
+license: ${{ github.event.client_payload.license }}
+EOF
+
+    - name: Commit & Push
+      run: |
+        git config user.name "HighBit Bot"
+        git config user.email "actions@github.com"
+        git add docs/
+        git commit -m "Submit PPA: ${{ github.event.client_payload.ppa_name }}"
+        git push
