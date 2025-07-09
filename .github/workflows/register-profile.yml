@@ -1,4 +1,4 @@
-name: Register PPA Profile
+name: Register PPA Profile and Deploy
 
 on:
   workflow_dispatch:
@@ -9,22 +9,48 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   create-profile:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Create user profile from template
-      run: |
-        mkdir -p docs/${{ github.event.inputs.user }}/profile
-        cp docs/default/profile/index.html docs/${{ github.event.inputs.user }}/profile/index.html
+      - name: Create user profile from template
+        run: |
+          mkdir -p docs/${{ github.event.inputs.user }}/profile
+          cp docs/default/profile/index.html docs/${{ github.event.inputs.user }}/profile/index.html
 
-    - name: Commit & Push
-      run: |
-        git config user.name "HighBit Bot"
-        git config user.email "actions@github.com"
-        git add docs/
-        git commit -m "Create profile page for ${{ github.event.inputs.user }}"
-        git push
+      - name: Commit & Push
+        run: |
+          git config user.name "HighBit Bot"
+          git config user.email "actions@github.com"
+          git add docs/
+          git commit -m "Create profile page for ${{ github.event.inputs.user }}"
+          git push
+
+  deploy:
+    needs: create-profile
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
