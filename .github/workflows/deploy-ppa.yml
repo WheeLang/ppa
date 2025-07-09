@@ -1,0 +1,73 @@
+name: Submit PPA and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      user:
+        required: true
+        type: string
+      ppa_name:
+        required: true
+        type: string
+      description:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      license:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  submit-ppa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add PPA YAML
+        run: |
+          mkdir -p docs/${{ github.event.inputs.user }}
+          cat <<EOF > docs/${{ github.event.inputs.user }}/${{ github.event.inputs.ppa_name }}.yml
+name: ${{ github.event.inputs.ppa_name }}
+description: ${{ github.event.inputs.description }}
+version: ${{ github.event.inputs.version }}
+license: ${{ github.event.inputs.license }}
+EOF
+
+      - name: Commit & Push
+        run: |
+          git config user.name "HighBit Bot"
+          git config user.email "actions@github.com"
+          git add docs/
+          git commit -m "Submit PPA: ${{ github.event.inputs.ppa_name }}"
+          git push
+
+  deploy:
+    needs: submit-ppa
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
