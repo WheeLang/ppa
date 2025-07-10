@@ -1,0 +1,58 @@
+name: Create PPA and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      user:
+        required: true
+        type: string
+      name:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  create-profile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create PPA
+        run: |
+          mkdir -p docs/${{ github.event.inputs.user }}/${{ github.event.inputs.name }}
+
+      - name: Commit & Push
+        run: |
+          git config user.name "HighBit Bot"
+          git config user.email "actions@github.com"
+          git add docs/
+          git commit -m "Create PPA ${{ github.event.inputs.user }}/${{ github.event.inputs.name }}"
+          git push
+
+  deploy:
+    needs: create-profile
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'docs'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
